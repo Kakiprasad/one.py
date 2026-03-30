@@ -1,0 +1,6 @@
+cloudscraper
+requests
+feedparser
+pyTelegramBotAPI
+deep-translator
+google-generativeai
