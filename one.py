@@ -120,7 +120,14 @@ def summary(message):
     rss = "\n".join(rss_news_store[-100:])
 
     prompt = f"""
-Give detailed stock market & business news analysis in Telugu.
+Structure the response into these 3 specific sections:
+
+1. 🚀 Stock Market & Corporate Analysis
+2. 🇮🇳 National Business & Policy News
+3. 🌍 International Market & Global Trends
+
+Provide detailed analysis in Telugu.
+Give clear actionable insights and highlight important stocks if any.
 
 DATA:
 {rss}
