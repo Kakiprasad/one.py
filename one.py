@@ -24,15 +24,10 @@ def log(msg, level="INFO"):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] [{level}] {msg}")
 
 # --- DATA ---
-stock_news_store = []
 rss_news_store = []
 sent_links = set()
-sent_stock = set()
 
 # --- HELPERS ---
-def clean(text):
-    return re.sub(r'\s+', ' ', text.strip().lower())
-
 def translate(text):
     try:
         return GoogleTranslator(source='auto', target='te').translate(text)
@@ -62,15 +57,7 @@ def fetch_rss():
         try:
             log(f"🔗 Fetching: {name}")
 
-            # 🔥 ఇక్కడ add చేయాలి
-            if name == "CNBC":
-                headers = {
-                    "User-Agent": "Mozilla/5.0",
-                    "Accept": "application/xml"
-                }
-            else:
-                headers = {"User-Agent": "Mozilla/5.0"}
-
+            headers = {"User-Agent": "Mozilla/5.0"}
             res = requests.get(url, headers=headers, timeout=10)
 
             if res.status_code != 200:
@@ -82,8 +69,6 @@ def fetch_rss():
             if not feed.entries:
                 log(f"⚠️ Empty feed: {name}", "ERROR")
                 continue
-
-            log(f"📊 {name} entries: {len(feed.entries)}")
 
             new_count = 0
 
@@ -123,75 +108,22 @@ def fetch_rss():
         except Exception as e:
             log(f"❌ RSS Error {name}: {e}", "ERROR")
 
-# --- SCANX ---
-def fetch_scanx():
-    log("🔍 ScanX checking...")
-
-    scraper = cloudscraper.create_scraper()
-    url = "https://scanx.trade/stock-market-news/news-feeds"
-
-    try:
-        res = scraper.get(url, timeout=15)
-        matches = re.findall(r'>([^<>]{50,300})<', res.text)
-
-        log(f"📊 ScanX found: {len(matches)}")
-
-        new_count = 0
-
-        for news in matches:
-            text = news.strip()
-
-            if len(text) < 80:
-                continue
-
-            key = clean(text)
-
-            if key in sent_stock:
-                continue
-
-            sent_stock.add(key)
-            stock_news_store.append(text)
-            new_count += 1
-
-            msg = f"🚀 ScanX\n\n{text}\n\n{translate(text)}"
-            send_long_message(CHAT_ID, msg)
-
-            log(f"✅ Sent ScanX: {text[:60]}")
-            time.sleep(2)
-
-        if new_count == 0:
-            log("😴 No new ScanX news")
-        else:
-            log(f"🆕 {new_count} new ScanX news")
-
-    except Exception as e:
-        log(f"❌ ScanX Error: {e}", "ERROR")
-
 # --- AI SUMMARY ---
 @bot.message_handler(commands=['summary'])
 def summary(message):
-    if not stock_news_store and not rss_news_store:
+    if not rss_news_store:
         bot.reply_to(message, "❌ వార్తలు లేవు")
         return
 
-    bot.send_message(CHAT_ID, "🔍 Gemini AI విశ్లేషణ జరుగుతోంది...")
+    bot.send_message(CHAT_ID, "🔍 AI విశ్లేషణ జరుగుతోంది...")
 
-    stock = "\n".join(stock_news_store[-70:])
-    rss = "\n".join(rss_news_store[-70:])
+    rss = "\n".join(rss_news_store[-100:])
 
     prompt = f"""
-Structure the response into these 3 specific sections:
-
-1. 🚀 Stock Market & Corporate Analysis (ScanX Data)
-2. 🇮🇳 National Business & Policy News (RSS Data)
-3. 🌍 International Market & Global Trends (RSS Data)
-
-Provide detailed analysis in Telugu.
-Give clear actionable insights and highlight important stocks if any.
+Give detailed stock market & business news analysis in Telugu.
 
 DATA:
-STOCK: {stock}
-RSS: {rss}
+{rss}
 """
 
     try:
@@ -199,7 +131,6 @@ RSS: {rss}
         result = response.text
 
         send_long_message(CHAT_ID, result)
-
         log("✅ Summary sent")
 
     except Exception as e:
@@ -208,12 +139,12 @@ RSS: {rss}
 # --- LIST ---
 @bot.message_handler(commands=['list'])
 def list_news(message):
-    if not stock_news_store:
+    if not rss_news_store:
         bot.reply_to(message, "❌ data లేదు")
         return
 
     msg = ""
-    for i, n in enumerate(stock_news_store[-50:], 1):
+    for i, n in enumerate(rss_news_store[-50:], 1):
         msg += f"{i}. {n}\n\n"
 
     send_long_message(CHAT_ID, msg)
@@ -223,7 +154,6 @@ def loop():
     while True:
         log("🔁 New cycle started")
         try:
-            fetch_scanx()
             fetch_rss()
             log("✅ Cycle completed")
         except Exception as e:
