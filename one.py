@@ -88,12 +88,23 @@ def fetch_rss():
                     entry.get("content", [{}])[0].get("value", "")
                 )
 
+                # టెక్స్ట్ క్లీనింగ్ మరియు ట్రాన్స్‌లేషన్
                 clean_desc = re.sub('<[^>]+>', '', summary)
                 clean_desc = clean_desc.replace("\n", " ").strip()
 
-                rss_news_store.append(title + " " + clean_desc)
+                tel_title = translate(title)
+                tel_desc = translate(clean_desc[:800]) 
 
-                msg = f"🌐 {name}\n\n{translate(title)}\n\n{translate(clean_desc[:300])}\n\n{link}"
+                # మీరు అడిగిన కొత్త ఫార్మాట్
+                msg = (
+                    f"📌 *{tel_title}*\n\n"
+                    f"🇬🇧 *English Title:*\n{title}\n\n"
+                    f"🇮🇳 *తెలుగు సమ్మరీ:*\n{tel_desc}\n\n"
+                    f"🌐 **{name}** | 🔗 [Read More]({link})"
+                )
+
+                # స్టోర్ చేయడం కోసం
+                rss_news_store.append(title + " " + clean_desc)
 
                 send_long_message(CHAT_ID, msg)
 
@@ -151,7 +162,7 @@ def list_news(message):
         return
 
     msg = ""
-    for i, n in enumerate(rss_news_store[-50:], 1):
+    for i, n in enumerate(rss_news_store[-70:], 1):
         msg += f"{i}. {n}\n\n"
 
     send_long_message(CHAT_ID, msg)
