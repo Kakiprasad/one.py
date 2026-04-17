@@ -154,18 +154,43 @@ DATA:
     except Exception as e:
         log(f"❌ AI Error: {e}", "ERROR")
 
-# --- LIST ---
+# --- LIST COMMAND ---
 @bot.message_handler(commands=['list'])
 def list_news(message):
+    log(f"📋 List command requested")
+
     if not rss_news_store:
-        bot.reply_to(message, "❌ data లేదు")
+        bot.reply_to(message, "❌ ప్రస్తుతం ఏ వార్తలు లేవు.")
         return
 
-    msg = ""
-    for i, n in enumerate(rss_news_store[-70:], 1):
-        msg += f"{i}. {n}\n\n"
+    args = message.text.split()
+    try:
+        page = int(args[1]) if len(args) > 1 else 1
+    except:
+        page = 1
 
-    send_long_message(CHAT_ID, msg)
+    per_page = 20
+    total_news = len(rss_news_store)
+    total_pages = (total_news + per_page - 1) // per_page
+
+    if page < 1 or page > total_pages:
+        bot.reply_to(message, f"❌ పేజీ {page} లేదు.\nమొత్తం {total_pages} పేజీలు ఉన్నాయి.")
+        return
+
+    reversed_store = list(reversed(rss_news_store))
+    start = (page - 1) * per_page
+    page_news = reversed_store[start:start + per_page]
+
+    response = f"📋 ఇటీవలి వార్తలు - పేజీ {page}/{total_pages}\n"
+    response += f"📊 మొత్తం వార్తలు: {total_news}\n\n"
+
+    for i, news in enumerate(page_news, start + 1):
+        short_news = (news[:120] + "...") if len(news) > 120 else news
+        response += f"{i}. {short_news}\n\n"
+
+    response += f"📌 తదుపరి పేజీ: /list {page + 1}"
+
+    send_long_message(CHAT_ID, response)
 
 # --- LOOP ---
 def loop():
